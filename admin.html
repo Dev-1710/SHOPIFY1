@@ -1,0 +1,8 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SHOPIFY - Admin</title><link rel="stylesheet" href="style.css"></head>
+<body data-page="admin"><main><h2 class="t">Admin Dashboard</h2><div class="stats" id="stats"></div>
+<form id="addP" class="row" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr"><input id="pn" placeholder="Product name" required><select id="pc"><option>Men</option><option>Women</option><option>Kids</option><option>Unisex</option></select>
+<input id="pp" type="number" placeholder="Price" required><select id="pt"><option value="tee">T-shirt</option><option value="jeans">Jeans</option><option value="jacket">Jacket</option><option value="dress">Dress</option><option value="kurti">Kurti</option><option value="hoodie">Hoodie</option><option value="shorts">Shorts</option></select><button>Add Product</button></form>
+<h2 class="t">Products</h2><table id="plist"></table><h2 class="t">Orders</h2><table id="olist"></table><h2 class="t">Customers</h2><table id="ulist"></table><h2 class="t">Contact Messages</h2><table id="mlist"></table></main>
+<script src="main.js"></script></body></html>
