@@ -235,7 +235,9 @@ route('GET', '/api/admin/messages', (ctx) => {
 });
 
 // ---------- server ----------
-const PUBLIC = path.join(__dirname, '..', 'public');   // optional: drop your frontend here
+// Frontend folder: FRONTEND_DIR, else ./public, else the repo root (when this code lives in backend/)
+const PUBLIC = process.env.FRONTEND_DIR ||
+  (fs.existsSync(path.join(__dirname, '..', 'public')) ? path.join(__dirname, '..', 'public') : path.join(__dirname, '..', '..'));
 const MIME = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg' };
 
 const server = http.createServer(async (req, res) => {
@@ -243,7 +245,9 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') return send(res, 204, {});
   if (!url.pathname.startsWith('/api/')) {            // static frontend
     const file = path.join(PUBLIC, url.pathname === '/' ? 'index.html' : url.pathname);
-    if (file.startsWith(PUBLIC) && fs.existsSync(file) && fs.statSync(file).isFile()) {
+    const rel = path.relative(PUBLIC, file);
+    const hidden = rel.split(path.sep).some((x) => x.startsWith('.') || x === 'backend' || x === 'node_modules' || x === 'data');
+    if (!hidden && !rel.startsWith('..') && fs.existsSync(file) && fs.statSync(file).isFile()) {
       res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream' });
       return fs.createReadStream(file).pipe(res);
     }
