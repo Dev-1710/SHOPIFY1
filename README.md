@@ -1,64 +1,68 @@
-# SHOPIFY - Online Clothing Store
+# Online Clothing Store - Backend
 
-A front-end e-commerce website for a clothing store, built with **HTML, CSS and JavaScript** (no backend, no database).
-Made as my project for the Diploma in IT Engineering course at EDUCLENTT Learning Center, Bahadurgarh.
+REST API + SQLite database for the Shopify-style clothing store project
+(Dev Gulia, B.Tech IT). It replaces `localStorage` with a real server and database.
 
-> "SHOPIFY" is only the name of this student project. It is not connected with any commercial company.
+**Zero npm packages.** Uses only what is built into Node.js 22.13+ (`http`, `crypto`, `node:sqlite`).
 
-## Features
-
-**Customer side**
-- Sign up and login (strong password rule, passwords stored as SHA-256 hashes)
-- Search, category filter and price sorting
-- Wishlist and quick-view window with size selection
-- Cart with quantity control, coupons (`SAVE10`, `WELCOME20`) and delivery charge (free above Rs. 999)
-- Checkout form validation and a demo "Pay Now" button (no real payment)
-- My Orders page and a contact form
-
-**Admin side**
-- Dashboard with totals for products, orders, customers and revenue
-- Add and delete products
-- Change order status (Pending, Shipped, Delivered, Cancelled)
-- View customers and contact messages
-
-## Technologies
-HTML5, CSS3, JavaScript (ES6), Web Storage API (`localStorage`), SubtleCrypto (SHA-256), Visual Studio Code.
-
-## How to run
-1. Download or clone this repository.
-2. Open `index.html` in any web browser. No installation is needed.
-
-Demo admin login (written in `main.js`): username `admin`, password `Admin@123`.
-
-## Project structure
+## Run
+```bash
+node -v            # must be 22.13 or newer
+npm start          # http://localhost:3000
+npm test           # 25 automated checks
 ```
-index.html     Home page and product catalogue
-login.html     Login and sign-up
-cart.html      Cart and checkout
-orders.html    Customer order history
-contact.html   Contact form
-admin.html     Admin dashboard
-style.css      Stylesheet
-main.js        All JavaScript logic
-screenshots/   Screenshots used in this README
+Optional: copy `.env.example` to `.env` to change port / admin password.
+Default admin: **admin / Admin@123** (change it!). Sample products are added on first run.
+
+To serve your frontend too, put `index.html` etc. inside the `public/` folder and open http://localhost:3000.
+Add `<script src="api.js"></script>` and call the helper functions in `public/api.js` instead of localStorage.
+
+## What is stored (maps to the old localStorage keys)
+| Old key | Table | Contents |
+|---|---|---|
+| sp_users | `users` | username, email, **hashed** password (scrypt + salt), role |
+| sp_session | `sessions` | login token (stored hashed), expiry 7 days |
+| sp_products | `products` | name, category, price, type, rating |
+| sp_cart | `cart` | product, size, quantity per user |
+| sp_wish | `wishlist` | wishlist product ids per user |
+| sp_orders | `orders` | order id, items, coupon, total, status |
+| sp_messages | `messages` | contact form messages |
+
+## API
+Send `Authorization: Bearer <token>` (returned by signup/login) for protected routes.
+
+| Method | Route | Who |
+|---|---|---|
+| POST | `/api/auth/signup`, `/api/auth/login`, `/api/auth/logout` | public / user |
+| GET | `/api/auth/me` | user |
+| GET | `/api/products?search=&category=&sort=low\|high` | public |
+| POST / DELETE | `/api/products`, `/api/products/:id` | admin |
+| GET / POST | `/api/cart` , `/api/cart` | user |
+| PATCH / DELETE | `/api/cart/:id` | user |
+| GET / POST | `/api/wishlist`, `/api/wishlist/:productId` (toggle) | user |
+| POST | `/api/coupons/validate` | public |
+| POST / GET | `/api/orders` (checkout / my orders) | user |
+| POST | `/api/messages` (contact form) | public |
+| GET | `/api/admin/stats`, `/orders`, `/customers`, `/messages` | admin |
+| PATCH | `/api/admin/orders/:id` `{status}` | admin |
+
+## Security (good points for the viva)
+- Passwords hashed with **scrypt + random salt** (stronger than plain SHA-256); never stored or returned in plain text
+- Same strong-password rule enforced on the **server**, not just in the browser
+- Random session tokens, stored hashed in DB, expire after 7 days
+- Role check on every admin route (customer gets `403`)
+- Order totals, coupons and delivery are **recalculated on the server** so prices can't be tampered with
+- All SQL uses prepared statements (prevents SQL injection)
+- Login rate limit (10 tries / 5 min)
+
+## Business rules
+Coupons `SAVE10` (10%) and `WELCOME20` (20%); free delivery above Rs 999, otherwise Rs 49
+(change `DELIVERY_CHARGE` in `src/server.js` if your frontend uses a different amount).
+
+## Push to GitHub
+```bash
+git init && git add . && git commit -m "Add backend" 
+git branch -M main
+git remote add origin https://github.com/<your-username>/<repo>.git
+git push -u origin main
 ```
-
-## Data storage
-All data is saved in the browser's `localStorage` with these keys: `sp_products`, `sp_users`, `sp_session`, `sp_cart`, `sp_wish`, `sp_orders`, `sp_messages`. Data stays on one device and is cleared if browser data is cleared.
-
-## Limitations
-- No backend or database, so data is not shared between devices.
-- The payment button is a demonstration only.
-- The admin login is fixed inside the code, which is fine for a demo but not for a live shop.
-
-## Screenshots
-| Home | Quick view |
-|---|---|
-| ![Home](screenshots/home.png) | ![Quick view](screenshots/quickview.png) |
-
-| Cart | Admin |
-|---|---|
-| ![Cart](screenshots/cart.png) | ![Admin](screenshots/admin.png) |
-
-## Author
-Dev Gulia - B.Tech Information Technology (2024-2028), Guru Tegh Bahadur 4th Centenary Engineering College, New Delhi.

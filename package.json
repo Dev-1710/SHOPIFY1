@@ -1,0 +1,12 @@
+{
+  "name": "shopify-clothing-backend",
+  "version": "1.0.0",
+  "description": "Backend (REST API + SQLite) for the online clothing store internship project",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node test/smoke.js"
+  },
+  "engines": { "node": ">=22.13" },
+  "license": "MIT"
+}

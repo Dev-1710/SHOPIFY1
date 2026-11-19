@@ -1,0 +1,66 @@
+// Quick end-to-end check. Run: npm test  (uses a temporary database)
+process.env.DB_FILE = ':memory:';
+process.env.PORT = 3456;
+const server = require('../src/server');
+const base = 'http://localhost:3456/api';
+let pass = 0, fail = 0;
+async function call(method, p, body, token) {
+  const r = await fetch(base + p, { method, headers: { 'Content-Type': 'application/json', ...(token && { Authorization: 'Bearer ' + token }) }, body: body && JSON.stringify(body) });
+  return { status: r.status, data: await r.json() };
+}
+const check = (name, ok) => { ok ? pass++ : fail++; console.log((ok ? 'PASS ' : 'FAIL ') + name); };
+
+(async () => {
+  let r = await call('POST', '/auth/signup', { username: 'dev', email: 'dev@x.com', password: 'weak' });
+  check('weak password rejected', r.status === 400);
+  r = await call('POST', '/auth/signup', { username: 'dev', email: 'dev@x.com', password: 'Dev@1234' });
+  check('signup works', r.status === 201); const t = r.data.token;
+  r = await call('POST', '/auth/signup', { username: 'dev', email: 'd2@x.com', password: 'Dev@1234' });
+  check('duplicate username rejected', r.status === 409);
+  r = await call('POST', '/auth/login', { username: 'dev', password: 'wrong' });
+  check('wrong password rejected', r.status === 401);
+  r = await call('POST', '/auth/login', { username: 'dev', password: 'Dev@1234' });
+  check('login works', r.status === 200 && r.data.token);
+  r = await call('GET', '/cart');
+  check('cart needs login', r.status === 401);
+  r = await call('GET', '/products?sort=low');
+  check('products sorted low->high', r.data[0].price <= r.data[1].price);
+  r = await call('POST', '/cart', { productId: 1, size: 'L', qty: 2 }, t);
+  check('add to cart', r.status === 201);
+  r = await call('POST', '/cart', { productId: 1, size: 'L', qty: 1 }, t);
+  check('same item+size merges qty', r.data.items[0].qty === 3);
+  r = await call('GET', '/cart?coupon=SAVE10', null, t);
+  check('coupon discount 10%', r.data.discount === Math.round(r.data.subtotal * 0.1));
+  r = await call('POST', '/orders', { name: 'Dev', phone: '123', address: 'Delhi' }, t);
+  check('bad phone rejected', r.status === 400);
+  r = await call('POST', '/orders', { name: 'Dev', phone: '9876543210', address: 'Delhi', coupon: 'SAVE10' }, t);
+  check('order placed', r.status === 201 && r.data.orderId); const oid = r.data.orderId;
+  r = await call('GET', '/cart', null, t);
+  check('cart emptied after order', r.data.items.length === 0);
+  r = await call('GET', '/orders', null, t);
+  check('order history', r.data.length === 1 && r.data[0].items.length === 1);
+  r = await call('GET', '/admin/stats', null, t);
+  check('customer blocked from admin', r.status === 403);
+  r = await call('POST', '/auth/login', { username: 'admin', password: 'Admin@123' });
+  const a = r.data.token; check('admin login', r.data.user.role === 'admin');
+  r = await call('PATCH', '/admin/orders/' + oid, { status: 'Shipped' }, a);
+  check('admin updates status', r.status === 200);
+  r = await call('GET', '/orders', null, t);
+  check('customer sees new status', r.data[0].status === 'Shipped');
+  r = await call('POST', '/products', { name: 'Test Shirt', category: 'Men', price: 700, type: 'Shirt' }, a);
+  check('admin adds product', r.status === 201);
+  r = await call('DELETE', '/products/' + r.data.id, null, a);
+  check('admin deletes product', r.status === 200);
+  r = await call('GET', '/admin/stats', null, a);
+  check('stats: 1 customer, revenue > 0', r.data.customers === 1 && r.data.revenue > 0);
+  r = await call('POST', '/messages', { name: 'A', email: 'a@b.com', message: 'Hi' });
+  check('contact message saved', r.status === 201);
+  r = await call('GET', '/admin/messages', null, a);
+  check('admin reads messages', r.data.length === 1);
+  r = await call('POST', '/wishlist/1', null, t);
+  check('wishlist toggle on', r.data.wished === true);
+  r = await call('POST', '/auth/logout', null, t); r = await call('GET', '/auth/me', null, t);
+  check('logout invalidates token', r.status === 401);
+  console.log(`\n${pass} passed, ${fail} failed`);
+  server.close(); process.exit(fail ? 1 : 0);
+})();
