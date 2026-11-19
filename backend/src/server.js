@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 3000;
 const CORS = process.env.CORS_ORIGIN || '*';
 const STATUSES = ['Pending', 'Shipped', 'Delivered', 'Cancelled'];
 const COUPONS = { SAVE10: 10, WELCOME20: 20 };          // percent off
-const FREE_DELIVERY_ABOVE = 999, DELIVERY_CHARGE = 49;
+const FREE_DELIVERY_ABOVE = 999, DELIVERY_CHARGE = 99;
 
 // ---------- helpers ----------
 class HttpError extends Error { constructor(status, msg) { super(msg); this.status = status; } }
@@ -62,7 +62,7 @@ function totals(lines, couponCode) {
   if (code && !(code in COUPONS)) throw bad('Invalid coupon');
   const discount = code ? Math.round((subtotal * COUPONS[code]) / 100) : 0;
   const after = subtotal - discount;
-  const delivery = lines.length === 0 || after > FREE_DELIVERY_ABOVE ? 0 : DELIVERY_CHARGE;
+  const delivery = lines.length === 0 || after >= FREE_DELIVERY_ABOVE ? 0 : DELIVERY_CHARGE;
   return { subtotal, discount, delivery, total: after + delivery, coupon: code || null };
 }
 
@@ -114,8 +114,9 @@ route('POST', '/api/products', (ctx) => {
   const price = Number(b.price);
   if (!name || !category) throw bad('Name and category are required');
   if (!Number.isInteger(price) || price <= 0) throw bad('Price must be a positive whole number');
-  const r = db.prepare('INSERT INTO products (name, category, price, type, description) VALUES (?,?,?,?,?)')
-    .run(name, category, price, type, str(b.description, 500));
+  const hex = (v, d) => (/^#[0-9a-fA-F]{3,8}$/.test(v) ? v : d);
+  const r = db.prepare('INSERT INTO products (name, category, price, type, description, col, bg) VALUES (?,?,?,?,?,?,?)')
+    .run(name, category, price, type, str(b.description, 500) || 'New arrival at SHOPIFY.', hex(b.col, '#8a7d6b'), hex(b.bg, '#eee6da'));
   return created(db.prepare('SELECT * FROM products WHERE id = ?').get(r.lastInsertRowid));
 });
 route('DELETE', '/api/products/:id', (ctx) => {

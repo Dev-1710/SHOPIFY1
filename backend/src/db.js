@@ -31,7 +31,9 @@ CREATE TABLE IF NOT EXISTS products (       -- sp_products
   price INTEGER NOT NULL CHECK (price >= 0),
   type TEXT NOT NULL DEFAULT '',
   rating REAL NOT NULL DEFAULT 4.0,
-  description TEXT NOT NULL DEFAULT ''
+  description TEXT NOT NULL DEFAULT '',
+  col TEXT NOT NULL DEFAULT '#8a7d6b',      -- picture colour used by the frontend
+  bg TEXT NOT NULL DEFAULT '#eee6da'
 );
 CREATE TABLE IF NOT EXISTS cart (           -- sp_cart
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -69,5 +71,12 @@ CREATE TABLE IF NOT EXISTS messages (       -- sp_messages
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 `);
+
+// upgrade older databases that were created before col/bg existed
+const pcols = db.prepare('PRAGMA table_info(products)').all().map((c) => c.name);
+if (!pcols.includes('col')) {
+  db.exec("ALTER TABLE products ADD COLUMN col TEXT NOT NULL DEFAULT '#8a7d6b'");
+  db.exec("ALTER TABLE products ADD COLUMN bg TEXT NOT NULL DEFAULT '#eee6da'");
+}
 
 module.exports = db;
